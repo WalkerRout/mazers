@@ -51,18 +51,22 @@ impl Maze {
 
   pub fn solve(&self, start: Pos) -> Option<Vec<Pos>> {
     
-    fn fn_for_pos(m: &Maze, p: Pos, mut p_wl: Vec<Pos>, path: Vec<Pos>, 
-                  mut path_wl: Vec<Vec<Pos>>, rsf: Vec<Pos>) -> Option<Vec<Pos>> {
+    fn fn_for_pos(m: &Maze, p: Pos, mut p_wl: Vec<Pos>, path: Vec<Pos>, mut path_wl: Vec<Vec<Pos>>, rsf: Vec<Pos>) -> Option<Vec<Pos>> {
       if p == m.target {
+        // find the shorter of the current path to target and the current shortest path to target
         let mut n_rsf = path;
         n_rsf.push(p);
-        n_rsf = if rsf.len() < n_rsf.len() && rsf.len() > 0 { rsf.clone() } else { n_rsf.clone() };
+        n_rsf = if rsf.len() < n_rsf.len() && rsf.len() > 0 { rsf } else { n_rsf };
         
+        // only relevant in debug mode
         stacker::maybe_grow(RED_ZONE, GROW, || {
+          // if the target is reached, recurse down worklists and find next path to target
           fn_for_lop(m, p_wl, path_wl, n_rsf)
         })  
       } else if path.contains(&p) {
+        // only relevant in debug mode
         stacker::maybe_grow(RED_ZONE, GROW, || {
+          // skip this current position; its already been explored (in its own path)
           fn_for_lop(m, p_wl, path_wl, rsf)
         })
       } else {
@@ -80,15 +84,16 @@ impl Maze {
         }
         n_path_wl.append(&mut path_wl);
         
-
+        // only relevant in debug mode
         stacker::maybe_grow(RED_ZONE, GROW, || {
+          // recurse down next positions in worklists until target is reached (check first part of if statement for what happens after)
           fn_for_lop(m, n_p_wl, n_path_wl, rsf)
         })
       }
     }
 
-    fn fn_for_lop(m: &Maze, p_wl: Vec<Pos>, path_wl: Vec<Vec<Pos>>, 
-                  rsf: Vec<Pos>) -> Option<Vec<Pos>> {
+    fn fn_for_lop(m: &Maze, p_wl: Vec<Pos>, path_wl: Vec<Vec<Pos>>, rsf: Vec<Pos>) -> Option<Vec<Pos>> {
+      // check return condition -> all positions have been explored, return shortest path or none if unsolveable
       if p_wl.len() == 0 {
         if rsf.len() == 0 {
           None
@@ -111,14 +116,17 @@ impl Maze {
           path_tail = path_wl[1..].to_owned();
         }
         
-
+        // only relevant in debug mode
         stacker::maybe_grow(RED_ZONE, GROW, || {
+          // continue to work through worklists
           fn_for_pos(m, p_head, p_tail.to_vec(), path_head, path_tail.to_vec(), rsf)
         })
       }
     }
   
+    // only relevant in debug mode
     stacker::maybe_grow(RED_ZONE, GROW, || {
+      // call position function on initial position and worklists
       fn_for_pos(self, start, vec![], vec![], vec![], vec![])
     })
   }
@@ -131,9 +139,11 @@ impl Maze {
       .enumerate()
       .for_each(|(i, _)| {
         if i % self.size as usize == 0 { s.push('\n'); }
+        // identify x and y values relative to width
         let x: i32 = i as i32 % self.size;
         let y: i32 = i as i32 / self.size;
         
+        // decide the next character to print
         let next_char = if path.contains(&Pos::new(x, y)) {
           PATH_CHAR
         } else if self.get(x, y) == Spot::Empty {
@@ -143,6 +153,7 @@ impl Maze {
         };
         
         if next_char == PATH_CHAR {
+          // Bold red ansi escape sequence and stop sequence
           let start = "\x1b[1;31m";
           let stop  = "\x1b[0m";
           s.push_str(start);
@@ -158,7 +169,8 @@ impl Maze {
     use std::io::Write;
 
     let mut stdout = std::io::BufWriter::new(std::io::stdout());
-    if let Ok(_) = stdout.write_all(s.as_bytes()) {}
+    stdout.write_all(s.as_bytes()).unwrap(); // expect no failure
+    
     print!("\n");
   }
 
